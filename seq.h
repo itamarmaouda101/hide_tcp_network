@@ -41,20 +41,19 @@ static int ct_seq_show(struct seq_file *f_seq, void *v)
     return 0;
 }
 
-
-static const struct seq_operations seq_ops = {
+struct seq_operations origin_seq_ops, seq_ops = {
     .start = ct_seq_start,
     .next = ct_seq_next,    
     .stop = ct_seq_stop,   
     .show = ct_seq_show    /*  <----postion to attack---->      */
 };
-static int ct_open(struct inode *inode, struct file *file)
+int ct_open(struct inode *inode, struct file *file)
 {
     return seq_open(file , &seq_ops);
 }
-static const struct file_operations fops = {
+/*static const struct file_operations fops = {
     .owner = THIS_MODULE,
     .open = ct_open,
 
-}
+}*/
 #endif
