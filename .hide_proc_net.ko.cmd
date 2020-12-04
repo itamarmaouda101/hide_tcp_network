@@ -1,0 +1,1 @@
+cmd_/home/itamar/hide_tcp_network/hide_proc_net.ko := ld -r -m elf_x86_64  -z max-page-size=0x200000  --build-id  -T ./scripts/module-common.lds -o /home/itamar/hide_tcp_network/hide_proc_net.ko /home/itamar/hide_tcp_network/hide_proc_net.o /home/itamar/hide_tcp_network/hide_proc_net.mod.o;  true

